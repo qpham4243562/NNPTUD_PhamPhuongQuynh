@@ -121,12 +121,10 @@ router.put('/:id', async function(req, res, next) {
   }
 });
 
-// DELETE route for soft delete
 router.delete('/:id', async function(req, res, next) {
   try {
     const id = req.params.id;
-    
-    // Check if product exists
+
     const product = await productModel.findById(id);
     if (!product) {
       return res.status(404).send({
@@ -141,8 +139,7 @@ router.delete('/:id', async function(req, res, next) {
         message: "Sản phẩm đã được xóa trước đó"
       });
     }
-    
-    // Soft delete by updating isDeleted field
+
     const deletedProduct = await productModel.findByIdAndUpdate(
       id,
       { isDeleted: true },
