@@ -63,22 +63,34 @@ router.get('/:id', async function(req, res, next) {
 
 router.post('/', async function(req, res, next) {
   try {
-    let newProduct = new productModel({
-      name: req.body.name,
-      price:req.body.price,
-      quantity: req.body.quantity,
-      category:req.body.category,
-      isDeleted: false
-    })
-    await newProduct.save();
-    res.status(200).send({
-      success:true,
-      data:newProduct
-    });
+
+    let cate = await CategoryModel.findOne({name: req.body.category});
+
+    if(cate && cate.length > 0){
+      let newProduct = new productModel({
+        name: req.body.name,
+        price: req.body.price,
+        quantity: req.body.quantity,
+        category: req.body.category,
+        isDeleted: false
+      });
+      
+      await newProduct.save();
+      
+      res.status(200).send({
+        success: true,
+        data: newProduct
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: "Không có category phù hợp"
+      });
+    }
   } catch (error) {
-    res.status(404).send({
-      success:false,
-      message:error.message
+    res.status(500).send({
+      success: false,
+      message: error.message
     });
   }
 });
