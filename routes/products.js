@@ -2,6 +2,7 @@ var express = require('express');
 const { ConnectionCheckOutFailedEvent } = require('mongodb');
 var router = express.Router();
 let productModel = require('../schemas/product')
+let CategoryModel = require('../schemas/category')
 
 function buildQuery(obj){
   console.log(obj);
@@ -21,16 +22,19 @@ function buildQuery(obj){
     }else{
       result.price.$lte = 10000;
     }
-    
+  }else{
+    result.price.$gte = 0;
+    result.price.$lte = 10000;
   }
-  result.isDeleted = { $ne: true };
+  console.log(result);
   return result;
 }
 
+/* GET users listing. */
 router.get('/', async function(req, res, next) {
   
 
-  let products = await productModel.find(buildQuery(req.query));
+  let products = await productModel.find(buildQuery(req.query)).populate("category");
 
   res.status(200).send({
     success:true,
@@ -41,14 +45,6 @@ router.get('/:id', async function(req, res, next) {
   try {
     let id = req.params.id;
     let product = await productModel.findById(id);
-    
-    if (!product || product.isDeleted) {
-      return res.status(404).send({
-        success: false,
-        message: "Không tìm thấy sản phẩm hoặc sản phẩm đã bị xóa"
-      });
-    }
-    
     res.status(200).send({
       success:true,
       data:product
@@ -63,110 +59,91 @@ router.get('/:id', async function(req, res, next) {
 
 router.post('/', async function(req, res, next) {
   try {
-
-    let cate = await CategoryModel.findOne({name: req.body.category});
-
-    if(cate && cate.length > 0){
+    let cate = await CategoryModel.findOne({name:req.body.category})
+    if(cate){
       let newProduct = new productModel({
         name: req.body.name,
-        price: req.body.price,
+        price:req.body.price,
         quantity: req.body.quantity,
-        category: req.body.category,
-        isDeleted: false
-      });
-      
+        category:cate._id
+      })
       await newProduct.save();
-      
       res.status(200).send({
-        success: true,
-        data: newProduct
+        success:true,
+        data:newProduct
       });
-    } else {
+    }else{
       res.status(404).send({
-        success: false,
-        message: "Không có category phù hợp"
+        success:false,
+        data:"cate khong dung"
       });
     }
   } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: error.message
+    res.status(404).send({
+      success:false,
+      message:error.message
     });
   }
 });
-
 router.put('/:id', async function(req, res, next) {
   try {
-    const id = req.params.id;
-
-    const existingProduct = await productModel.findById(id);
-    if (!existingProduct || existingProduct.isDeleted) {
-      return res.status(404).send({
-        success: false,
-        message: "Không tìm thấy sản phẩm hoặc sản phẩm đã bị xóa"
-      });
+    let updateObj = {};
+    let body = req.body;
+    if(body.name){
+      updateObj.name = body.name;
     }
-
-    const updatedData = {
-      name: req.body.name || existingProduct.name,
-      price: req.body.price || existingProduct.price,
-      quantity: req.body.quantity || existingProduct.quantity,
-      category: req.body.category || existingProduct.category
-    };
-    
-    const updatedProduct = await productModel.findByIdAndUpdate(
-      id,
-      updatedData,
-      { new: true } 
-    );
-    
+    if(body.price){
+      updateObj.price = body.price;
+    }
+    if(body.quantity){
+      updateObj.quantity = body.quantity;
+    }
+    if(body.category){
+      let cate = await CategoryModel.findOne({name:req.body.category});
+      if(!cate){
+        res.status(404).send({
+          success:false,
+          message:error.message
+        });
+      }
+    }
+    let updatedProduct = await productModel.findByIdAndUpdate(req.params.id,
+      updateObj,
+      {new:true})
     res.status(200).send({
-      success: true,
-      message: "Cập nhật sản phẩm thành công",
-      data: updatedProduct
+      success:true,
+      data:updatedProduct
     });
   } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: error.message
+    res.status(404).send({
+      success:false,
+      message:error.message
     });
   }
 });
-
 router.delete('/:id', async function(req, res, next) {
   try {
-    const id = req.params.id;
-
-    const product = await productModel.findById(id);
-    if (!product) {
-      return res.status(404).send({
-        success: false,
-        message: "Không tìm thấy sản phẩm"
+    let product = await productModel.findById(req.params.id);
+    if(product){
+      let deletedProduct = await productModel.findByIdAndUpdate(req.params.id,
+        {
+          isDeleted:true
+        },
+        {new:true})
+        res.status(200).send({
+          success:true,
+          data:deletedProduct
+        });
+    }else{
+      res.status(404).send({
+        success:false,
+        message:"ID khong ton tai"
       });
     }
-    
-    if (product.isDeleted) {
-      return res.status(400).send({
-        success: false,
-        message: "Sản phẩm đã được xóa trước đó"
-      });
-    }
-
-    const deletedProduct = await productModel.findByIdAndUpdate(
-      id,
-      { isDeleted: true },
-      { new: true }
-    );
-    
-    res.status(200).send({
-      success: true,
-      message: "Xóa sản phẩm thành công",
-      data: deletedProduct
-    });
   } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: error.message
+    res.status(404).send({
+      success:false,
+      message:error.message
     });
   }
 });

@@ -1,4 +1,5 @@
 let mongoose = require('mongoose');
+let slugify = require('slugify');
 
 let productSchema = new mongoose.Schema({
     name:{
@@ -6,30 +7,50 @@ let productSchema = new mongoose.Schema({
         unique: true,
         required:true
     },
+    slug: {
+        type: String,
+        unique: true
+    },
     price:{
         type:Number,
         required:true,
         min:0
-    },description:{
+    },
+    description:{
         type:String,
         default:""
-    },quantity:{
+    },
+    quantity:{
         type:Number,
         default:0,
         min:0
-    },imgURL:{
+    },
+    imgURL:{
         type:String,
         default:""
-    },category:{
-        type:mongoose.Schema.Types.ObjectId,
+    },
+    category:{
+        type:mongoose.Types.ObjectId,
         ref:'category',
         required:true
     },
-    isDeleted: {  
-        type: Boolean,
-        default: false
+    isDeleted:{
+        type:Boolean,
+        default:false
     }
 },{
     timestamps:true
-})
-module.exports = mongoose.model('product',productSchema)
+});
+
+// Pre-save hook to generate slug from name
+productSchema.pre('save', function(next) {
+    if (this.isModified('name')) {
+        this.slug = slugify(this.name, {
+            lower: true,      // convert to lower case
+            strict: true      // remove special characters
+        });
+    }
+    next();
+});
+
+module.exports = mongoose.model('product',productSchema);
