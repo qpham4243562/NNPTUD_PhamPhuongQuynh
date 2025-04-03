@@ -3,12 +3,11 @@ var router = express.Router();
 let productModel = require('../schemas/product');
 let CategoryModel = require('../schemas/category');
 
-// Get products by category slug
+
 router.get('/:categorySlug', async function(req, res, next) {
   try {
     const categorySlug = req.params.categorySlug;
-    
-    // Find the category by slug
+  
     const category = await CategoryModel.findOne({ slug: categorySlug });
     
     if (!category) {
@@ -18,7 +17,7 @@ router.get('/:categorySlug', async function(req, res, next) {
       });
     }
     
-    // Find products in this category
+
     const products = await productModel.find({ 
       category: category._id,
       isDeleted: { $ne: true }
@@ -36,12 +35,10 @@ router.get('/:categorySlug', async function(req, res, next) {
   }
 });
 
-// Get specific product by category slug and product slug
 router.get('/:categorySlug/:productSlug', async function(req, res, next) {
   try {
     const { categorySlug, productSlug } = req.params;
     
-    // Find the category by slug
     const category = await CategoryModel.findOne({ slug: categorySlug });
     
     if (!category) {
@@ -51,7 +48,6 @@ router.get('/:categorySlug/:productSlug', async function(req, res, next) {
       });
     }
     
-    // Find the product by slug and category
     const product = await productModel.findOne({
       slug: productSlug,
       category: category._id,
